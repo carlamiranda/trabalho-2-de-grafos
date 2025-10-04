@@ -1,7 +1,5 @@
 public class EulerianCycle {
-    private Stack<Integer> cycle = new Stack<Integer>();  // Eulerian cycle; null if no such cycle
-
-    // an undirected edge, with a field to indicate whether the edge has already been used
+    private Stack<Integer> cycle = new Stack<Integer>();
     private static class Edge {
         private final int v;
         private final int w;
@@ -13,7 +11,6 @@ public class EulerianCycle {
             isUsed = false;
         }
 
-        // returns the other vertex of the edge
         public int other(int vertex) {
             if      (vertex == v) return w;
             else if (vertex == w) return v;
@@ -21,24 +18,14 @@ public class EulerianCycle {
         }
     }
 
-    /**
-     * Computes an Eulerian cycle in the specified graph, if one exists.
-     *
-     * @param G the graph
-     */
     public EulerianCycle(Graph G) {
 
-        // must have at least one edge
         if (G.E() == 0) return;
 
-        // necessary condition: all vertices have even degree
-        // (this test is needed, or it might find an Eulerian path instead of cycle)
         for (int v = 0; v < G.V(); v++)
             if (G.degree(v) % 2 != 0)
                 return;
 
-        // create local view of adjacency lists, to iterate one vertex at a time
-        // the helper Edge data type is used to avoid exploring both copies of an edge v-w
         Queue<Edge>[] adj = (Queue<Edge>[]) new Queue[G.V()];
         for (int v = 0; v < G.V(); v++)
             adj[v] = new Queue<Edge>();
@@ -46,7 +33,6 @@ public class EulerianCycle {
         for (int v = 0; v < G.V(); v++) {
             int selfLoops = 0;
             for (int w : G.adj(v)) {
-                // careful with self loops
                 if (v == w) {
                     if (selfLoops % 2 == 0) {
                         Edge e = new Edge(v, w);
@@ -63,12 +49,10 @@ public class EulerianCycle {
             }
         }
 
-        // initialize stack with any non-isolated vertex
         int s = nonIsolatedVertex(G);
         Stack<Integer> stack = new Stack<Integer>();
         stack.push(s);
 
-        // greedily search through edges in iterative DFS style
         cycle = new Stack<Integer>();
         while (!stack.isEmpty()) {
             int v = stack.pop();
@@ -79,38 +63,23 @@ public class EulerianCycle {
                 stack.push(v);
                 v = edge.other(v);
             }
-            // push vertex with no more leaving edges to cycle
             cycle.push(v);
         }
 
-        // check if all edges are used
         if (cycle.size() != G.E() + 1)
             cycle = null;
 
         assert certifySolution(G);
     }
 
-    /**
-     * Returns the sequence of vertices on an Eulerian cycle.
-     *
-     * @return the sequence of vertices on an Eulerian cycle;
-     *         {@code null} if no such cycle
-     */
     public Iterable<Integer> cycle() {
         return cycle;
     }
 
-    /**
-     * Returns true if the graph has an Eulerian cycle.
-     *
-     * @return {@code true} if the graph has an Eulerian cycle;
-     *         {@code false} otherwise
-     */
     public boolean hasEulerianCycle() {
         return cycle != null;
     }
 
-    // returns any non-isolated vertex; -1 if no such vertex
     private static int nonIsolatedVertex(Graph G) {
         for (int v = 0; v < G.V(); v++)
             if (G.degree(v) > 0)
@@ -118,17 +87,6 @@ public class EulerianCycle {
         return -1;
     }
 
-    /**************************************************************************
-     *
-     *  The code below is solely for testing correctness of the data type.
-     *
-     **************************************************************************/
-
-    // Determines whether a graph has an Eulerian cycle using necessary
-    // and sufficient conditions (without computing the cycle itself):
-    //    - at least one edge
-    //    - degree(v) is even for every vertex v
-    //    - the graph is connected (ignoring isolated vertices)
     private static boolean satisfiesNecessaryAndSufficientConditions(Graph G) {
 
         // Condition 0: at least 1 edge
@@ -247,27 +205,3 @@ public class EulerianCycle {
         unitTest(G6, "simple graph");
     }
 }
-
-/******************************************************************************
- *  Copyright 2002-2025, Robert Sedgewick and Kevin Wayne.
- *
- *  This file is part of algs4.jar, which accompanies the textbook
- *
- *      Algorithms, 4th edition by Robert Sedgewick and Kevin Wayne,
- *      Addison-Wesley Professional, 2011, ISBN 0-321-57351-X.
- *      http://algs4.cs.princeton.edu
- *
- *
- *  algs4.jar is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  algs4.jar is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with algs4.jar.  If not, see http://www.gnu.org/licenses.
- ******************************************************************************/
