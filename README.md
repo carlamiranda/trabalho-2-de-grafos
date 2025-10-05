@@ -1,6 +1,4 @@
-Integrantes:
-Carla Miranda
-Anna Lara Magalhães
+Integrantes: Carla Miranda e Anna Lara Magalhães
 
 Análises de complexidade de tempo e espaço dos algoritmos:
 
