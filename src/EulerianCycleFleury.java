@@ -1,178 +1,105 @@
 public class EulerianCycleFleury {
 
-    private Stack<Integer> cycle = new Stack<>();
-    private final int totalEdges; 
-    private Queue<Edge>[] adj;
+    private Bag<Integer> cycle;
 
-    // Classe auxiliar para rastrear arestas não direcionadas e o uso
     private static class Edge {
-        private final int v;
-        private final int w;
-        private boolean isUsed;
+        int v, w;
+        boolean isUsed;
 
-        public Edge(int v, int w) {
+        Edge(int v, int w) {
             this.v = v;
             this.w = w;
-            isUsed = false;
+            this.isUsed = false;
         }
 
-        public int other(int vertex) {
+        int other(int vertex) {
             if (vertex == v) return w;
-            if (vertex == w) return v;
-            throw new IllegalArgumentException("Illegal endpoint");
+            else if (vertex == w) return v;
+            else throw new IllegalArgumentException("Vértice inválido");
         }
     }
 
     public EulerianCycleFleury(Graph G) {
-        this.totalEdges = G.E();
-        if (totalEdges == 0) return;
+        if (G.E() == 0) return;
 
-        // Mantém a checagem defensiva de grau par (a Main faz a checagem principal)
         for (int v = 0; v < G.V(); v++) {
             if (G.degree(v) % 2 != 0) return;
         }
 
-        // 1. Inicializa a lista de adjacência de arestas
-        @SuppressWarnings("unchecked")
-        Queue<Edge>[] adj = (Queue<Edge>[]) new Queue[G.V()];
-        for (int v = 0; v < G.V(); v++) adj[v] = new Queue<>();
+        Bag<Edge>[] adj = (Bag<Edge>[]) new Bag[G.V()];
+        for (int v = 0; v < G.V(); v++) {
+            adj[v] = new Bag<>();
+        }
 
         for (int v = 0; v < G.V(); v++) {
             for (int w : G.adj(v)) {
-                if (v < w) {
+                if (v <= w) { 
                     Edge e = new Edge(v, w);
-                    adj[v].enqueue(e);
-                    adj[w].enqueue(e);
-                }
-                else if (v == w) {
-                    Edge e = new Edge(v, w);
-                    adj[v].enqueue(e);
-                    adj[w].enqueue(e);
+                    adj[v].add(e);
+                    adj[w].add(e);
                 }
             }
         }
-        this.adj = adj;
 
-        int s = nonIsolatedVertex(G);
-        if (s == -1) return;
+        int start = nonIsolatedVertex(G);
+        if (start == -1) return;
 
-        Stack<Integer> stack = new Stack<>();
-        stack.push(s);
+        cycle = new Bag<>();
+        int current = start;
 
-        // 2. Loop principal de Fleury
-        while (!stack.isEmpty()) {
-            int v = stack.peek();
-            
-            Edge nextEdge = null;
-            int w = -1;
+        while (hasUnusedEdge(adj, current)) {
+            Edge nextEdge = chooseEdge(adj, current);
+            nextEdge.isUsed = true;
 
-            // Encontra a próxima aresta (Regra de Fleury: Prioriza Não-Ponte)
-            for (Edge e : adj[v]) {
-                if (!e.isUsed) {
-                    int u = e.other(v);
+            cycle.add(current);
 
-                    if (isBridge(v, u, e)) {
-                        // É ponte: só a guarda se ainda não tivermos uma opção
-                        if (nextEdge == null) {
-                            nextEdge = e; 
-                            w = u;
-                        }
-                    } else {
-                        // NÃO é ponte: é a ESCOLHA preferida. Pega e sai.
-                        nextEdge = e;
-                        w = u;
-                        break; 
-                    }
-                }
-            }
-
-            if (nextEdge != null) {
-                nextEdge.isUsed = true;
-                stack.push(w);
-            } else {
-                // Não há mais arestas. Adiciona ao ciclo e volta.
-                cycle.push(stack.pop());
-            }
+            current = nextEdge.other(current);
         }
 
-        // 3. Checagem final
-        if (cycle.size() != totalEdges + 1) cycle = null;
+        cycle.add(current);
     }
 
-    // --- MÉTODOS AUXILIARES CORRIGIDOS PARA O FLEURY ---
+    private Edge chooseEdge(Bag<Edge>[] adj, int v) {
+        Edge bridgeCandidate = null;
 
-    /**
-     * Verifica se a aresta (v, w) é uma ponte no subgrafo de arestas não usadas.
-     */
-    private boolean isBridge(int v, int w, Edge edge) {
-        
-        // 1. Caso obrigatório: Se o grau restante for 1, deve ser usada.
-        int remainingDegree = 0;
         for (Edge e : adj[v]) {
-            if (!e.isUsed) remainingDegree++;
-        }
-        if (remainingDegree == 1) return false; 
-
-        // 2. Testa a conectividade se houver alternativas (remainingDegree > 1).
-        
-        // A. Simula a remoção de (v, w)
-        edge.isUsed = true;
-        
-        // B. Conta o número TOTAL de vértices ativos (com arestas não usadas)
-        int totalActiveCount = countActiveVertices();
-
-        // C. Conta quantos vértices ativos são alcançáveis a partir de 'w'
-        // Passa o 'v' para ter um ponto de partida consistente.
-        boolean[] visited = new boolean[adj.length];
-        int reachableActiveCount = dfsCount(v, visited); 
-
-        // D. Desfaz a simulação
-        edge.isUsed = false;
-        
-        // E. Se a contagem alcançável for menor que a total, a aresta é uma ponte.
-        return (reachableActiveCount < totalActiveCount);
-    }
-
-    /**
-     * Conta quantos vértices no grafo ainda possuem pelo menos uma aresta não usada.
-     */
-    private int countActiveVertices() {
-        int activeCount = 0;
-        for (int v = 0; v < adj.length; v++) {
-            for (Edge e : adj[v]) {
-                if (!e.isUsed) {
-                    activeCount++;
-                    break; 
+            if (!e.isUsed) {
+                if (!isBridge(adj, v, e)) {
+                    return e; 
+                } else {
+                    bridgeCandidate = e; 
                 }
             }
         }
-        return activeCount;
+        return bridgeCandidate; 
     }
 
-    /**
-     * DFS que visita apenas arestas não usadas, contando apenas os vértices ATIVOS alcançados.
-     */
-    private int dfsCount(int v, boolean[] visited) {
+    private boolean isBridge(Bag<Edge>[] adj, int v, Edge e) {
+        if (countUnused(adj[v]) == 1) return false; 
+
+        e.isUsed = true;
+        int count1 = dfsCount(adj, v);
+        int count2 = dfsCount(adj, e.other(v));
+        e.isUsed = false;
+
+        return count1 > count2; 
+    }
+
+    private int dfsCount(Bag<Edge>[] adj, int start) {
+        boolean[] visited = new boolean[adj.length];
         Stack<Integer> stack = new Stack<>();
-        stack.push(v);
+        stack.push(start);
         int count = 0;
-        
+
         while (!stack.isEmpty()) {
-            int x = stack.pop();
-            if (!visited[x]) {
-                visited[x] = true;
-                
-                // CRUCIAL para o Fleury: Só conta o vértice se ele é ATIVO
-                boolean isActive = false;
-                for (Edge e : adj[x]) {
-                    if (!e.isUsed) { isActive = true; break; }
-                }
-                if (isActive) count++;
-                
-                for (Edge e : adj[x]) {
+            int v = stack.pop();
+            if (!visited[v]) {
+                visited[v] = true;
+                count++;
+                for (Edge e : adj[v]) {
                     if (!e.isUsed) {
-                        int y = e.other(x);
-                        if (!visited[y]) stack.push(y);
+                        int w = e.other(v);
+                        if (!visited[w]) stack.push(w);
                     }
                 }
             }
@@ -180,13 +107,29 @@ public class EulerianCycleFleury {
         return count;
     }
 
-    // Método auxiliar (não alterado)
+    private int countUnused(Bag<Edge> edges) {
+        int c = 0;
+        for (Edge e : edges) if (!e.isUsed) c++;
+        return c;
+    }
+
     private static int nonIsolatedVertex(Graph G) {
-        for (int v = 0; v < G.V(); v++)
+        for (int v = 0; v < G.V(); v++) {
             if (G.degree(v) > 0) return v;
+        }
         return -1;
     }
 
-    public Iterable<Integer> cycle() { return cycle; }
-    public boolean hasEulerianCycle() { return cycle != null; }
+    private boolean hasUnusedEdge(Bag<Edge>[] adj, int v) {
+        for (Edge e : adj[v]) if (!e.isUsed) return true;
+        return false;
+    }
+
+    public Iterable<Integer> cycle() {
+        return cycle;
+    }
+
+    public boolean hasEulerianCycle() {
+        return cycle != null && !cycle.isEmpty();
+    }
 }

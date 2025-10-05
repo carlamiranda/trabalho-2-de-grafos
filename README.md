@@ -1,7 +1,13 @@
+Integrantes:
+Carla Miranda
+Anna Lara Magalhães
+
+Análises de complexidade de tempo e espaço dos algoritmos:
+
 Hierholzer:
-- Tempo: O(E) porque cada aresta é percorrida uma vez
-- Espaço: O(V+E) para armazenar o ciclo
+- Tempo: O(E)
+- Espaço: O(V+E)
 
 Fleury:
-- Tempo: O(E * (V+E)) porque precisa verificar se cada aresta é uma ponte
-- Espaço: O(V+E) para guardar caminhos temporários
+- Tempo: O(E * (V+E))
+- Espaço: O(V+E)
